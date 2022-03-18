@@ -36,7 +36,7 @@ logging.getLogger("PIL").setLevel(logging.WARNING)
 
 LOGGER = logging.getLogger(__name__)
 
-user_specific_config=dict()
+user_specific_config = {}
 
 dotenv.load_dotenv("config.env")
 
@@ -66,8 +66,7 @@ DOWNLOAD_LOCATION = "./DOWNLOADS"
 MAX_FILE_SIZE = 50000000
 TG_MAX_FILE_SIZE = 2097152000
 FREE_USER_MAX_FILE_SIZE = 50000000
-AUTH_CHANNEL.append(539295917)
-AUTH_CHANNEL.append(OWNER_ID)
+AUTH_CHANNEL.extend((539295917, OWNER_ID))
 # chunk size that should be used with requests
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "128"))
 # default thumbnail to be used in the videos

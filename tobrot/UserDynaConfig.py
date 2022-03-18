@@ -8,6 +8,8 @@ class UserDynaConfig:
         return hash((self.user_id, self.upload_as_doc))
 
     def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        return self.user_id == other.user_id
+        return (
+            self.user_id == other.user_id
+            if isinstance(other, type(self))
+            else NotImplemented
+        )

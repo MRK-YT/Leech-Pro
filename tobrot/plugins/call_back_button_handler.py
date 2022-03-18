@@ -123,7 +123,7 @@ async def button(bot, update: CallbackQuery):
             LOGGER.info(g_list)
             g_del_list = list(set(g_list) - set(g_d_list))
             LOGGER.info(g_del_list)
-            if len(g_del_list) != 0:
+            if g_del_list:
                 for f in g_del_list:
                     if os.path.isfile(f):
                         os.remove(f)

@@ -252,9 +252,10 @@ async def rename_tg_file(client, message):
         return
     if len(message.command) > 1:
         new_name = (
-            str(Path().resolve()) + "/" +
-            message.text.split(" ", maxsplit=1)[1].strip()
+            f'{str(Path().resolve())}/'
+            + message.text.split(" ", maxsplit=1)[1].strip()
         )
+
         file, mess_age = await download_tg(client, message)
         try:
             if file:
