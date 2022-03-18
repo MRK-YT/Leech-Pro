@@ -49,9 +49,8 @@ async def split_large_files(input_file):
         while end_time <= total_duration:
             LOGGER.info(i)
             # file name generate
-            parted_file_name = "{}_PART_{}.{}".format(
-                str(base_name), str(i).zfill(5), str(input_extension)
-            )
+            parted_file_name = f"{str(base_name)}_PART_{str(i).zfill(5)}.{str(input_extension)}"
+
 
             output_file = os.path.join(new_working_directory, parted_file_name)
             LOGGER.info(output_file)
@@ -64,7 +63,7 @@ async def split_large_files(input_file):
 
             # adding offset of 3 seconds to ensure smooth playback
             start_time = end_time - 3
-            end_time = end_time + minimum_duration
+            end_time += minimum_duration
             i = i + 1
 
             if (end_time > total_duration) and not flag:
@@ -76,7 +75,7 @@ async def split_large_files(input_file):
     elif SP_LIT_ALGO_RITH_M.lower() == "hjs":
         # handle normal files here
         o_d_t = os.path.join(new_working_directory, os.path.basename(input_file))
-        o_d_t = o_d_t + "."
+        o_d_t = f'{o_d_t}.'
         file_genertor_command = [
             "split",
             "--numeric-suffixes=1",

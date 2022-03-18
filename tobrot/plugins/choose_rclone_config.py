@@ -38,9 +38,10 @@ There are {len(sections)} sections in your rclone.conf file,
 please choose which section you want to use:"""
         ikeyboard = [
             pyrogram.InlineKeyboardButton(
-                "‼️ Cancel ‼️", callback_data=(f"rcloneCancel").encode("UTF-8")
+                "‼️ Cancel ‼️", callback_data="rcloneCancel".encode("UTF-8")
             )
         ]
+
         inline_keyboard.append(ikeyboard)
         reply_markup = pyrogram.InlineKeyboardMarkup(inline_keyboard)
         await message.reply_text(text=msg_text, reply_markup=reply_markup)

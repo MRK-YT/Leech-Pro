@@ -59,11 +59,10 @@ async def status_message_f(
     async with _lock:
         if len(gid_dict[chat_id]) == 0:
             gid_dict[chat_id].append(mess_id)
-        else:
-            if not mess_id in gid_dict[chat_id]:
-                await client.delete_messages(chat_id, gid_dict[chat_id])
-                gid_dict[chat_id].pop()
-                gid_dict[chat_id].append(mess_id)
+        elif mess_id not in gid_dict[chat_id]:
+            await client.delete_messages(chat_id, gid_dict[chat_id])
+            gid_dict[chat_id].pop()
+            gid_dict[chat_id].append(mess_id)
 
     prev_mess = "By gautamajay52"
     await message.delete()
@@ -84,8 +83,22 @@ async def status_message_f(
                     msgg = f"<b>Peers:</b> {file.connections} | <b>Seeders:</b> {file.num_seeders}"
 
                 percentage = int(file.progress_string(0).split('%')[0])
-                prog = "[{0}{1}]".format("".join([FINISHED_PROGRESS_STR for i in range(math.floor(percentage / 5))]),"".join([UN_FINISHED_PROGRESS_STR for i in range(20 - math.floor(percentage / 5))]))
-                msg += f"<b>════════════════════════════════</b>\n"
+                prog = "[{0}{1}]".format(
+                    "".join(
+                        [
+                            FINISHED_PROGRESS_STR
+                            for _ in range(math.floor(percentage / 5))
+                        ]
+                    ),
+                    "".join(
+                        [
+                            UN_FINISHED_PROGRESS_STR
+                            for _ in range(20 - math.floor(percentage / 5))
+                        ]
+                    ),
+                )
+
+                msg += "<b>════════════════════════════════</b>\\n"
                 msg += f"\n<b>{downloading_dir_name}</b>"
                 msg += f"\n<b>{prog}</b>"
                 msg += f"\n<b>Speed</b>: {file.download_speed_string()}"
@@ -164,119 +177,123 @@ async def cancel_message_f(client, message):
 
 
 async def exec_message_f(client, message):
-    if message.from_user.id in AUTH_CHANNEL:
-        DELAY_BETWEEN_EDITS = 0.3
-        PROCESS_RUN_TIME = 100
-        cmd = message.text.split(" ", maxsplit=1)[1]
+    if message.from_user.id not in AUTH_CHANNEL:
+        return
+    DELAY_BETWEEN_EDITS = 0.3
+    PROCESS_RUN_TIME = 100
+    cmd = message.text.split(" ", maxsplit=1)[1]
 
-        reply_to_id = message.message_id
-        if message.reply_to_message:
-            reply_to_id = message.reply_to_message.message_id
+    reply_to_id = message.message_id
+    if message.reply_to_message:
+        reply_to_id = message.reply_to_message.message_id
 
-        start_time = time.time() + PROCESS_RUN_TIME
-        process = await asyncio.create_subprocess_shell(
-            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-        e = stderr.decode()
-        if not e:
-            e = "No Error"
-        o = stdout.decode()
-        if not o:
-            o = "No Output"
-        else:
-            _o = o.split("\n")
-            o = "`\n".join(_o)
-        OUTPUT = f"**QUERY:**\n__Command:__\n`{cmd}` \n__PID:__\n`{process.pid}`\n\n**stderr:** \n`{e}`\n**Output:**\n{o}"
+    start_time = time.time() + PROCESS_RUN_TIME
+    process = await asyncio.create_subprocess_shell(
+        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    e = stderr.decode()
+    if not e:
+        e = "No Error"
+    o = stdout.decode()
+    if not o:
+        o = "No Output"
+    else:
+        _o = o.split("\n")
+        o = "`\n".join(_o)
+    OUTPUT = f"**QUERY:**\n__Command:__\n`{cmd}` \n__PID:__\n`{process.pid}`\n\n**stderr:** \n`{e}`\n**Output:**\n{o}"
 
-        if len(OUTPUT) > MAX_MESSAGE_LENGTH:
-            with io.BytesIO(str.encode(OUTPUT)) as out_file:
-                out_file.name = "exec.text"
-                await client.send_document(
-                    chat_id=message.chat.id,
-                    document=out_file,
-                    caption=cmd,
-                    disable_notification=True,
-                    reply_to_message_id=reply_to_id,
-                )
-            await message.delete()
-        else:
-            await message.reply_text(OUTPUT)
-
-
-async def upload_document_f(client, message):
-    imsegd = await message.reply_text("processing ...")
-    if message.from_user.id in AUTH_CHANNEL:
-        if " " in message.text:
-            recvd_command, local_file_name = message.text.split(" ", 1)
-            recvd_response = await upload_to_tg(
-                imsegd, local_file_name, message.from_user.id, {}, client
-            )
-            LOGGER.info(recvd_response)
-    await imsegd.delete()
-
-
-async def eval_message_f(client, message):
-    if message.from_user.id in AUTH_CHANNEL:
-        status_message = await message.reply_text("Processing ...")
-        cmd = message.text.split(" ", maxsplit=1)[1]
-
-        reply_to_id = message.message_id
-        if message.reply_to_message:
-            reply_to_id = message.reply_to_message.message_id
-
-        old_stderr = sys.stderr
-        old_stdout = sys.stdout
-        redirected_output = sys.stdout = io.StringIO()
-        redirected_error = sys.stderr = io.StringIO()
-        stdout, stderr, exc = None, None, None
-
-        try:
-            await aexec(cmd, client, message)
-        except Exception:
-            exc = traceback.format_exc()
-
-        stdout = redirected_output.getvalue()
-        stderr = redirected_error.getvalue()
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
-
-        evaluation = ""
-        if exc:
-            evaluation = exc
-        elif stderr:
-            evaluation = stderr
-        elif stdout:
-            evaluation = stdout
-        else:
-            evaluation = "Success"
-
-        final_output = (
-            "<b>EVAL</b>: <code>{}</code>\n\n<b>OUTPUT</b>:\n<code>{}</code> \n".format(
-                cmd, evaluation.strip()
-            )
-        )
-
-        if len(final_output) > MAX_MESSAGE_LENGTH:
-            with open("eval.text", "w+", encoding="utf8") as out_file:
-                out_file.write(str(final_output))
-            await message.reply_document(
-                document="eval.text",
+    if len(OUTPUT) > MAX_MESSAGE_LENGTH:
+        with io.BytesIO(str.encode(OUTPUT)) as out_file:
+            out_file.name = "exec.text"
+            await client.send_document(
+                chat_id=message.chat.id,
+                document=out_file,
                 caption=cmd,
                 disable_notification=True,
                 reply_to_message_id=reply_to_id,
             )
-            os.remove("eval.text")
-            await status_message.delete()
-        else:
-            await status_message.edit(final_output)
+        await message.delete()
+    else:
+        await message.reply_text(OUTPUT)
+
+
+async def upload_document_f(client, message):
+    imsegd = await message.reply_text("processing ...")
+    if message.from_user.id in AUTH_CHANNEL and " " in message.text:
+        recvd_command, local_file_name = message.text.split(" ", 1)
+        recvd_response = await upload_to_tg(
+            imsegd, local_file_name, message.from_user.id, {}, client
+        )
+        LOGGER.info(recvd_response)
+    await imsegd.delete()
+
+
+async def eval_message_f(client, message):
+    if message.from_user.id not in AUTH_CHANNEL:
+        return
+    status_message = await message.reply_text("Processing ...")
+    cmd = message.text.split(" ", maxsplit=1)[1]
+
+    reply_to_id = message.message_id
+    if message.reply_to_message:
+        reply_to_id = message.reply_to_message.message_id
+
+    old_stderr = sys.stderr
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = io.StringIO()
+    redirected_error = sys.stderr = io.StringIO()
+    stdout, stderr, exc = None, None, None
+
+    try:
+        await aexec(cmd, client, message)
+    except Exception:
+        exc = traceback.format_exc()
+
+    stdout = redirected_output.getvalue()
+    stderr = redirected_error.getvalue()
+    sys.stdout = old_stdout
+    sys.stderr = old_stderr
+
+    evaluation = ""
+    if exc:
+        evaluation = exc
+    elif stderr:
+        evaluation = stderr
+    elif stdout:
+        evaluation = stdout
+    else:
+        evaluation = "Success"
+
+    final_output = (
+        "<b>EVAL</b>: <code>{}</code>\n\n<b>OUTPUT</b>:\n<code>{}</code> \n".format(
+            cmd, evaluation.strip()
+        )
+    )
+
+    if len(final_output) > MAX_MESSAGE_LENGTH:
+        with open("eval.text", "w+", encoding="utf8") as out_file:
+            out_file.write(final_output)
+        await message.reply_document(
+            document="eval.text",
+            caption=cmd,
+            disable_notification=True,
+            reply_to_message_id=reply_to_id,
+        )
+        os.remove("eval.text")
+        await status_message.delete()
+    else:
+        await status_message.edit(final_output)
 
 
 async def aexec(code, client, message):
     exec(
-        f"async def __aexec(client, message): "
-        + "".join(f"\n {l}" for l in code.split("\n"))
+        (
+            "async def __aexec(client, message): "
+            + "".join(f"\n {l}" for l in code.split("\n"))
+        )
     )
+
     return await locals()["__aexec"](client, message)
 
 

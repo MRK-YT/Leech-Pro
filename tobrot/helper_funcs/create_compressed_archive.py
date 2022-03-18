@@ -19,7 +19,7 @@ async def create_archive(input_directory):
         # #BlameTelegram
         suffix_extention_length = 1 + 3 + 1 + 2
         if len(base_dir_name) > (64 - suffix_extention_length):
-            compressed_file_name = base_dir_name[0 : (64 - suffix_extention_length)]
+            compressed_file_name = base_dir_name[:64 - suffix_extention_length]
             compressed_file_name += ".tar.gz"
         # fix for https://t.me/c/1434259219/13344
         file_genertor_command = [
